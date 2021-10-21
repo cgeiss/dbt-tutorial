@@ -3,17 +3,32 @@ version: 2
 models:
   - name: customers
     description: "{{ doc('customers') }}"
+    tests:
+      - dbt_expectations.expect_table_column_count_to_equal_other_table:
+          compare_model: ref("stg_customers")
+      - dbt_expectations.expect_table_row_count_to_equal_other_table:
+          compare_model: ref("stg_customers")
     columns:
       - name: customer_id
         description: Primary key
         tests:
           - unique
+          - dbt_expectations.expect_column_values_to_be_unique
           - not_null
+          - dbt_expectations.expect_column_values_to_not_be_null
+          - dbt_expectations.expect_column_to_exist
       - name: first_order_date
         description: NULL when a customer has not yet placed an order.
+      - name: bogus_column
+        description: Non-existent column to test dbt_expectations.expect_column_to_exist.
+        tests:
+          - dbt_expectations.expect_column_to_exist
 
   - name: stg_customers
     description: This model cleans up customer data
+    tests:
+      - dbt_expectations.expect_table_column_count_to_equal:
+          value: 3
     columns:
       - name: customer_id
         description: Primary key
@@ -23,6 +38,9 @@ models:
 
   - name: stg_orders
     description: This model cleans up order data
+    tests:
+    - dbt_expectations.expect_table_columns_to_match_ordered_list:
+        column_list: ["order_id", "customer_id", "order_date", "status"]
     columns:
       - name: order_id
         description: Primary key
@@ -33,6 +51,8 @@ models:
         tests:
           - accepted_values:
               values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
       - name: customer_id
         tests:
           - not_null
